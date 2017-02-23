@@ -29,6 +29,13 @@ page.on('load', function(e) {
 
 Events added on `page.on()` will fire each time the event is trigged. If you only want to fire an event once, you can use the ` page.bind()` instead.
 
+In your master template add `id="content"` to the element where you want your ajax-requests to be displayed.
+```html
+<div id="content">
+    This content will be replaced by page.js when loading an url
+</div>
+```
+
 ## Ajax request
 
 You can call `page.js` in the template of your ajax-request.
