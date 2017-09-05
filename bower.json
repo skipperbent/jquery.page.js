@@ -1,0 +1,27 @@
+{
+  "name": "jquery.page",
+  "version": "1.0",
+  "homepage": "https://github.com/skipperbent/jquery.page.js.git",
+  "authors": [
+    "Simon Sessingø <simon.sessingoe@gmail.com>"
+  ],
+  "description": "Simple turbolink-like functionality for jQuery.",
+  "main": "jquery.page.js",
+  "keywords": [
+    "link",
+    "turbolink",
+    "page",
+    "jquery",
+    "ajax"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    ".idea",
+    "bower_components"
+  ],
+  "dependencies": {
+    "jquery": "^3.2.1",
+    "history.js": "^1.8.0"
+  }
+}
