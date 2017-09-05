@@ -5,16 +5,18 @@ Simple turbolink-like functionality for jQuery.
 
 ```js
 // Intiailize jquery.turbolinks
-page.init();
+page.init({
+    container: '#content'
+});
 
 // Fires before ajax request
 page.on('preload', function() {
-    
+
 });
 
 // Fires on progress
 page.on('progress', function(e) {
-    
+
 });
 
 // Fires on page-load
@@ -23,7 +25,7 @@ page.on('load', function(e) {
     // Google Analytics
     ga('set', { page: location.pathname.substr(1) + location.search, title: window.title });
     ga('send', 'pageview');
-    
+
 });
 ```
 
@@ -35,6 +37,15 @@ In your master template add `id="content"` to the element where you want your aj
     This content will be replaced by page.js when loading an url
 </div>
 ```
+
+## Events
+
+- ready
+- preload
+- load
+- progress
+- error
+- statechange
 
 ## Ajax request
 
@@ -48,20 +59,20 @@ You can call `page.js` in the template of your ajax-request.
 <script>
     // Set the page title
     page.setTitle('My loaded page');
-    
+
     // Add styles to <head> if not already present
     page.loadStyles([
       '/css/specific-style.css'
     ]);
-    
+
     // Add scripts to <head> if not already present
     page.loadScripts([
       '//code.jquery.com/jquery-3.1.1.slim.min.js'
     ]);
-    
+
     // Fires when page and scripts is fully loaded
     page.ready(function() {
-    
+
     });
 </script>
 ```
