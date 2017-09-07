@@ -1,28 +1,30 @@
 # page.js
-Simple turbolink-like functionality for jQuery.
+Simple turbolink-like helper for jQuery.
 
 ## Example
 
 ```js
 // Intiailize jquery.turbolinks
-page.init({
+var page = new $p.page({
     container: '#content'
 });
 
-// Fires before ajax request
 page.on('preload', function() {
 
-});
+    // Fires before ajax request
 
-// Fires on progress
-page.on('progress', function(e) {
+}).on('progress', function(e) {
 
-});
+    // Fires on progress
 
-// Fires on page-load
-page.on('load', function(e) {
+}).on('pushstate', function(data) {
 
-    // Google Analytics
+    // Save data on state
+    data.activeMenuElement = 'whatever';
+
+}).on('load', function(e) {
+
+    // Fire Google Analytics on page-load
     ga('set', { page: location.pathname.substr(1) + location.search, title: window.title });
     ga('send', 'pageview');
 
@@ -45,6 +47,7 @@ In your master template add `id="content"` to the element where you want your aj
 - load
 - progress
 - error
+- pushstate
 - statechange
 
 ## Ajax request
