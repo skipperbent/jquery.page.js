@@ -1,4 +1,17 @@
-var page = {
+/**
+ * Page.js
+ * @author Simon Sessingø
+ * @version 1.0.1
+ **/
+if (typeof($p) === 'undefined') {
+    var $p = {};
+}
+
+$p.page = function (options) {
+    return this.init(options);
+};
+
+$p.page.prototype = {
     history: null,
     scriptsBuffer: [],
     options: {
@@ -11,7 +24,8 @@ var page = {
             load: [],
             progress: [],
             error: [],
-            statechange: []
+            statechange: [],
+            pushstate: []
         },
         events: {
             ready: [],
@@ -19,10 +33,11 @@ var page = {
             load: [],
             progress: [],
             error: [],
-            statechange: []
+            statechange: [],
+            pushstate: []
         }
     },
-    init: function(options) {
+    init: function (options) {
 
         var self = this;
 
@@ -30,24 +45,25 @@ var page = {
 
         self.history = window.History;
 
-        History.Adapter.bind(window, 'statechange', function() {
+        History.Adapter.bind(window, 'statechange', function () {
             var states = History.savedStates;
 
+            self.trigger('statechange', History.getState());
+
             // Ensure that page reload doesn't trigger events or duplicate reload
-            if(states.length > 1 && states[states.length - 2] !== null && states[states.length - 2].url === location.href) {
+            if (states.length > 1 && states[states.length - 2] !== null && states[states.length - 2].url === location.href) {
                 return;
             }
 
-            self.fireEvent('statechange');
             self.load(History.getState().url);
         });
 
-        $(document).on('click.page', 'a:not([data-ajax="false"])', function(e) {
+        $(document).off('click.page.link').on('click.page.link', 'a:not([data-ajax="false"])', function (e) {
             // Ignore ctrl + click
             if (!e.metaKey && !e.ctrlKey) {
                 var href = $(this).attr('href');
 
-                if(href === (location.pathname + location.search)) {
+                if (href === (location.pathname + location.search)) {
                     e.preventDefault();
                     self.reload();
                     return;
@@ -55,72 +71,58 @@ var page = {
 
                 if (href !== null && href.indexOf('/') === 0) {
                     e.preventDefault();
-                    self.history.pushState(null, $(this).text(), href);
+                    self.go(href);
                 }
             }
-        }).on('click.page', 'form button[type="submit"]:not([data-ajax="false"])', function(e) {
-            e.preventDefault();
-            var form = $(this).parents('form:first');
-
-            var name = $(this).attr('name');
-            var value = $(this).attr('value');
-
-            if(name !== null) {
-                form.prepend($('<input type="hidden" />').attr('name', name).attr('value', value));
-            }
-
-            form.trigger('submit');
         });
 
         this.bindForms();
 
-        page.fireEvent('ready');
+        this.trigger('ready');
+
+        return this;
     },
-    reload: function() {
+    reload: function () {
         this.load(location.href, null, {
             reload: true
         });
     },
-    go: function(url) {
-        History.pushState({
-            state: 1
-        }, url, url);
+    go: function (url, title, data) {
+        data = (typeof data === 'undefined') ? {} : data;
+        title = (typeof title === 'undefined') ? url : title;
+        this.trigger('pushstate', data);
+        History.pushState(data, title, url);
     },
-    back: function() {
+    back: function () {
         History.back();
     },
-    load: function(url, container, settings) {
+    load: function (url, container, settings) {
 
         var self = this;
-        settings = (settings === null) ? {} : settings;
-
-        self.fireEvent('preload', {
-            url: url,
-            container: container,
-            ajax: settings
-        });
+        container = (typeof container === 'undefined') ? this.options.container : container;
+        settings = (typeof settings === 'undefined') ? {} : settings;
 
         settings = $.extend({
             url: url,
-            success: function(r) {
+            success: function (r) {
                 $(self.options.container).html(r);
                 //self.bindForms();
-                self.fireEvent('load', {
+                self.trigger('load', {
                     reload: settings.reload,
                     response: r
                 });
             },
-            error: function(r) {
+            error: function (r) {
                 $(self.options.container).html(r);
-                self.fireEvent('error', {
+                self.trigger('error', {
                     response: r
                 });
             },
-            xhr: function() {
+            xhr: function () {
                 var xhr = new window.XMLHttpRequest();
-                xhr.addEventListener('progress', function(e) {
+                xhr.addEventListener('progress', function (e) {
                     var percentage = e.loaded / e.total;
-                    self.fireEvent('progress', {
+                    self.trigger('progress', {
                         percentage: percentage,
                         xhr: xhr
                     });
@@ -134,20 +136,26 @@ var page = {
             reload: false
         }, settings);
 
-        $.ajax(settings);
+        self.trigger('preload', {
+            url: url,
+            container: container,
+            ajax: settings
+        });
+
+        return $.ajax(settings);
     },
-    bindForms: function() {
+    bindForms: function () {
 
         var self = this;
 
-        $(document).on('submit.page', 'form:not([data-ajax="false"])', function(e) {
+        $(document).off('submit.page').on('submit.page', 'form:not([data-ajax="false"])', function (e) {
             e.preventDefault();
 
             var form = $(this);
             var action = $(this).attr('action');
             var method = ($(this).attr('method') !== null) ? $(this).attr('method').toLowerCase() : 'get';
 
-            if(action) {
+            if (action) {
                 var settings = {
                     type: method,
                     data: form.serializeArray()
@@ -155,7 +163,7 @@ var page = {
 
                 var url = action;
 
-                if(method !== 'get') {
+                if (method !== 'get') {
                     if (window.FormData !== null) {
 
                         // Add files to ajax param
@@ -181,67 +189,80 @@ var page = {
 
                 } else {
 
-                    if(url.indexOf('?') > -1) {
+                    if (url.indexOf('?') > -1) {
                         url = url.toString().substr(0, url.indexOf('?'));
                     }
 
                     url += '?' + form.serialize();
-                    self.history.pushState(null, $(this).text(), url);
+                    self.go(url);
                 }
             }
+        }).off('click.page.submit').on('click.page.submit', 'form button[type="submit"]:not([data-ajax="false"])', function (e) {
+            e.preventDefault();
+            var form = $(this).parents('form:first');
+
+            var name = $(this).attr('name');
+            var value = $(this).attr('value');
+
+            if (name !== null) {
+                form.prepend($('<input type="hidden" />').attr('name', name).attr('value', value));
+            }
+
+            form.trigger('submit');
         });
     },
-    fireEvent: function(name, data) {
-        if(this.options.events[name] !== null) {
+    trigger: function (name, data) {
+        if (this.options.events[name] !== null) {
             for (var i = 0; i < this.options.events[name].length; i++) {
                 this.options.events[name][i](data);
             }
         }
 
-        if(this.options.bindings[name] !== null) {
+        if (this.options.bindings[name] !== null) {
             for (i = 0; i < this.options.bindings[name].length; i++) {
                 this.options.bindings[name][i](data);
                 this.options.bindings[name].splice(i, 1);
             }
         }
     },
-    setTitle: function(title) {
+    setTitle: function (title) {
         document.title = title;
     },
-    ready: function(callback) {
-        if(this.options.bindings[name] === null) {
+    ready: function (callback) {
+        if (this.options.bindings[name] === null) {
             this.options.bindings[name] = [callback];
         } else {
             this.options.bindings[name].push(callback);
         }
     },
-    on: function(name, callback) {
-        if(this.options.events[name] === null) {
+    on: function (name, callback) {
+        if (this.options.events[name] === null) {
             this.options.events[name] = [callback];
         } else {
             this.options.events[name].push(callback);
         }
+        return this;
     },
-    loadStyles: function(urls) {
+    loadStyles: function (urls) {
         var self = this;
 
-        for(var i = 0; i < urls.length; i++) {
+        for (var i = 0; i < urls.length; i++) {
             var css = urls[i];
 
-            if($.inArray(urls, self.options.styles) === -1) {
-                $('head').append( $('<link rel="stylesheet" type="text/css" />').attr('href', css) );
+            if ($.inArray(urls, self.options.styles) === -1) {
+                $('head').append($('<link rel="stylesheet" type="text/css" />').attr('href', css));
                 self.scripts.push(css);
             }
         }
     },
-    loadScripts: function(urls) {
+    loadScripts: function (urls) {
         var self = this;
 
         var loaded = 0;
 
         var script = null;
 
-        if(urls !== null) {
+        if (urls !== null) {
             for (var i = 0; i < urls.length; i++) {
                 script = urls[i];
 
@@ -252,22 +273,22 @@ var page = {
             }
         }
 
-        if(self.scriptsToLoad.length > 0) {
+        if (self.scriptsToLoad.length > 0) {
 
             script = self.scriptsToLoad[0];
             var myScript = document.createElement('script');
             myScript.src = script;
             myScript.async = true;
-            myScript.onload = function() {
+            myScript.onload = function () {
                 loaded += 1;
 
                 if (loaded >= self.scriptsToLoad.length) {
                     self.scriptsToLoad = [];
-                    self.fireEvent('ready');
+                    self.trigger('ready');
                 } else {
 
                     var tmp = [];
-                    for(var i = 1; i < self.scriptsToLoad.length; i++) {
+                    for (var i = 1; i < self.scriptsToLoad.length; i++) {
                         tmp.push(self.scriptsToLoad[i]);
                     }
 
@@ -280,19 +301,19 @@ var page = {
             document.body.appendChild(myScript);
 
         } else {
-            self.fireEvent('ready');
+            self.trigger('ready');
         }
     },
-    setScripts: function(scripts) {
+    setScripts: function (scripts) {
         this.options.scripts = scripts;
     },
-    setStyles: function(styles) {
+    setStyles: function (styles) {
         this.options.styles = styles;
     },
-    postback: function(el) {
+    postback: function (el) {
         var form = $(el);
 
-        if(form.find('#postback').length > 0) {
+        if (form.find('#postback').length > 0) {
             form.find('#postback').val(1);
         } else {
             form.append('<input type="hidden" name="postback" value="1" id="postback" />');
