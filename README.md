@@ -4,7 +4,8 @@ Simple turbolink-like helper for jQuery.
 ## Example
 
 ```js
-// Intiailize jquery.turbolinks
+// Intiailize plugin
+
 var page = new $p.page({
     container: '#content'
 });
@@ -29,6 +30,27 @@ page.on('preload', function() {
     ga('send', 'pageview');
 
 });
+
+// Use page.js when clicking url
+
+$(document).on('click.page.link', ' a:not([data-ajax="false"])', function (e) {
+    // Ignore ctrl + click
+    if (!e.metaKey && !e.ctrlKey) {
+        var href = $(this).attr('href');
+
+        if (href === (location.pathname + location.search)) {
+            e.preventDefault();
+            page.reload();
+            return;
+        }
+
+        if (href !== null && href.indexOf('/') === 0) {
+            e.preventDefault();
+            page.go(href);
+        }
+    }
+});
+
 ```
 
 Events added on `page.on()` will fire each time the event is trigged. If you only want to fire an event once, you can use the ` page.bind()` instead.
