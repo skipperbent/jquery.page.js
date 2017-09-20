@@ -58,7 +58,9 @@ $p.page.prototype = {
             self.load(History.getState().url);
         });
 
-        this.bindForms();
+        $(document).ready(function() {
+            self.bindForms();
+        });
 
         return this;
     },
@@ -68,6 +70,9 @@ $p.page.prototype = {
         });
     },
     go: function (url, title, data) {
+        if(window.location.pathname === url) {
+            return this.reload();
+        }
         data = (typeof data === 'undefined') ? {} : data;
         title = (typeof title === 'undefined') ? url : title;
         this.trigger('pushstate', data);
@@ -91,7 +96,6 @@ $p.page.prototype = {
                     reload: settings.reload,
                     response: r
                 });
-                self.trigger('ready');
             },
             error: function (r) {
                 $(self.options.container).html(r);
@@ -240,18 +244,16 @@ $p.page.prototype = {
 
             if ($.inArray(urls, self.options.styles) === -1) {
                 $('head').append($('<link rel="stylesheet" type="text/css" />').attr('href', css));
-                self.scripts.push(css);
+                self.options.styles.push(css);
             }
         }
     },
     loadScripts: function (urls) {
         var self = this;
-
         var loaded = 0;
-
         var script = null;
 
-        if (urls !== null) {
+        if (typeof urls !== 'undefined') {
             for (var i = 0; i < urls.length; i++) {
                 script = urls[i];
 
@@ -262,28 +264,28 @@ $p.page.prototype = {
             }
         }
 
-        if (self.scriptsToLoad.length > 0) {
+        if (self.scriptsBuffer.length > 0) {
 
-            script = self.scriptsToLoad[0];
+            script = self.scriptsBuffer[0];
             var myScript = document.createElement('script');
             myScript.src = script;
             myScript.async = true;
             myScript.onload = function () {
                 loaded += 1;
 
-                if (loaded >= self.scriptsToLoad.length) {
-                    self.scriptsToLoad = [];
+                if (loaded >= self.scriptsBuffer.length) {
+                    self.scriptsBuffer = [];
                     self.trigger('ready');
                 } else {
 
                     var tmp = [];
-                    for (var i = 1; i < self.scriptsToLoad.length; i++) {
-                        tmp.push(self.scriptsToLoad[i]);
+                    for (var i = 1; i < self.scriptsBuffer.length; i++) {
+                        tmp.push(self.scriptsBuffer[i]);
                     }
 
-                    self.scriptsToLoad = tmp;
+                    self.scriptsBuffer = tmp;
 
-                    self.loadScripts();
+                    self.loadScripts(tmp);
                 }
             };
 

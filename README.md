@@ -8,9 +8,7 @@ Simple turbolink-like helper for jQuery.
 
 var page = new $p.page({
     container: '#content'
-});
-
-page.on('preload', function() {
+}).on('preload', function() {
 
     // Fires before ajax request
 
