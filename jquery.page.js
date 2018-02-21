@@ -58,27 +58,9 @@ $p.page.prototype = {
             self.load(History.getState().url);
         });
 
-        $(document).off('click.page.link').on('click.page.link', 'a:not([data-ajax="false"])', function (e) {
-            // Ignore ctrl + click
-            if (!e.metaKey && !e.ctrlKey) {
-                var href = $(this).attr('href');
-
-                if (href === (location.pathname + location.search)) {
-                    e.preventDefault();
-                    self.reload();
-                    return;
-                }
-
-                if (href !== null && href.indexOf('/') === 0) {
-                    e.preventDefault();
-                    self.go(href);
-                }
-            }
+        $(document).ready(function() {
+            self.bindForms();
         });
-
-        this.bindForms();
-
-        this.trigger('ready');
 
         return this;
     },
@@ -88,6 +70,9 @@ $p.page.prototype = {
         });
     },
     go: function (url, title, data) {
+        if(window.location.pathname === url) {
+            return this.reload();
+        }
         data = (typeof data === 'undefined') ? {} : data;
         title = (typeof title === 'undefined') ? url : title;
         this.trigger('pushstate', data);
@@ -106,7 +91,7 @@ $p.page.prototype = {
             url: url,
             success: function (r) {
                 $(self.options.container).html(r);
-                //self.bindForms();
+                self.bindForms();
                 self.trigger('load', {
                     reload: settings.reload,
                     response: r
@@ -114,6 +99,7 @@ $p.page.prototype = {
             },
             error: function (r) {
                 $(self.options.container).html(r);
+                self.bindForms();
                 self.trigger('error', {
                     response: r
                 });
@@ -131,7 +117,7 @@ $p.page.prototype = {
                 return xhr;
             },
             timeout: self.options.timeout,
-            method: 'get',
+            type: 'get',
             cache: true,
             reload: false
         }, settings);
@@ -148,12 +134,12 @@ $p.page.prototype = {
 
         var self = this;
 
-        $(document).off('submit.page').on('submit.page', 'form:not([data-ajax="false"])', function (e) {
+        $(this.options.container + ' form:not([data-ajax="false"])').off('submit.page').on('submit.page', function (e) {
             e.preventDefault();
 
             var form = $(this);
             var action = $(this).attr('action');
-            var method = ($(this).attr('method') !== null) ? $(this).attr('method').toLowerCase() : 'get';
+            var method = (typeof $(this).attr('method') !== 'undefined') ? $(this).attr('method').toLowerCase() : 'get';
 
             if (action) {
                 var settings = {
@@ -168,6 +154,7 @@ $p.page.prototype = {
 
                         // Add files to ajax param
                         var formData = new FormData();
+
                         $.each(form.find("input[type='file']"), function (i, item) {
                             $.each($(item)[0].files, function (i, file) {
                                 formData.append($(item).attr('name'), file);
@@ -197,7 +184,9 @@ $p.page.prototype = {
                     self.go(url);
                 }
             }
-        }).off('click.page.submit').on('click.page.submit', 'form button[type="submit"]:not([data-ajax="false"])', function (e) {
+        });
+
+        $(this.options.container + ' form button[type="submit"]:not([data-ajax="false"])').on('click.page.submit', function (e) {
             e.preventDefault();
             var form = $(this).parents('form:first');
 
@@ -229,11 +218,15 @@ $p.page.prototype = {
         document.title = title;
     },
     ready: function (callback) {
+        return this.bind('ready', callback);
+    },
+    bind: function(name, callback) {
         if (this.options.bindings[name] === null) {
             this.options.bindings[name] = [callback];
         } else {
             this.options.bindings[name].push(callback);
         }
+        return this;
     },
     on: function (name, callback) {
         if (this.options.events[name] === null) {
@@ -251,18 +244,16 @@ $p.page.prototype = {
 
             if ($.inArray(urls, self.options.styles) === -1) {
                 $('head').append($('<link rel="stylesheet" type="text/css" />').attr('href', css));
-                self.scripts.push(css);
+                self.options.styles.push(css);
             }
         }
     },
     loadScripts: function (urls) {
         var self = this;
-
         var loaded = 0;
-
         var script = null;
 
-        if (urls !== null) {
+        if (typeof urls !== 'undefined') {
             for (var i = 0; i < urls.length; i++) {
                 script = urls[i];
 
@@ -273,28 +264,28 @@ $p.page.prototype = {
             }
         }
 
-        if (self.scriptsToLoad.length > 0) {
+        if (self.scriptsBuffer.length > 0) {
 
-            script = self.scriptsToLoad[0];
+            script = self.scriptsBuffer[0];
             var myScript = document.createElement('script');
             myScript.src = script;
             myScript.async = true;
             myScript.onload = function () {
                 loaded += 1;
 
-                if (loaded >= self.scriptsToLoad.length) {
-                    self.scriptsToLoad = [];
+                if (loaded >= self.scriptsBuffer.length) {
+                    self.scriptsBuffer = [];
                     self.trigger('ready');
                 } else {
 
                     var tmp = [];
-                    for (var i = 1; i < self.scriptsToLoad.length; i++) {
-                        tmp.push(self.scriptsToLoad[i]);
+                    for (var i = 1; i < self.scriptsBuffer.length; i++) {
+                        tmp.push(self.scriptsBuffer[i]);
                     }
 
-                    self.scriptsToLoad = tmp;
+                    self.scriptsBuffer = tmp;
 
-                    self.loadScripts();
+                    self.loadScripts(tmp);
                 }
             };
 
