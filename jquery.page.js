@@ -194,7 +194,7 @@ $p.page.prototype = {
             var value = $(this).attr('value');
 
             if (name !== null) {
-                form.prepend($('<input type="hidden" />').attr('name', name).attr('value', value));
+                form.prepend($('<input type="hidden">').attr('name', name).attr('value', value));
             }
 
             form.trigger('submit');
@@ -210,8 +210,10 @@ $p.page.prototype = {
         if (this.options.bindings[name] !== null) {
             for (i = 0; i < this.options.bindings[name].length; i++) {
                 this.options.bindings[name][i](data);
-                this.options.bindings[name].splice(i, 1);
+                this.options.bindings[name].slice(1);
             }
+
+            this.options.bindings[name] = null;
         }
     },
     setTitle: function (title) {
